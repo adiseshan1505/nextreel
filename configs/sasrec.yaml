@@ -1,0 +1,18 @@
+data:
+  min_interactions: 5
+
+model:
+  max_len: 200
+  d: 64
+  n_layers: 2
+  n_heads: 2
+  dropout: 0.2
+
+training:
+  loss: cross_entropy
+  batch_size: 64
+  early_stopping_patience: 5
+  n_seeds: 3
+
+evaluation:
+  k: 10

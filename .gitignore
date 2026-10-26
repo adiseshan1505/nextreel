@@ -1,0 +1,8 @@
+# MovieLens 1M may not be redistributed, so data is never committed
+data/
+
+__pycache__/
+*.py[cod]
+*.egg-info/
+.pytest_cache/
+.venv/
