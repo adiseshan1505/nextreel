@@ -13,7 +13,6 @@ These files are only skeletons for now.
 
 ```
 configs/        model and training settings
-scripts/        MovieLens 1M download script (the data is never committed)
 src/nextreel/   data pipeline, models, training, evaluation and explanations
 app/            Streamlit demo
 tests/          split and metric tests
