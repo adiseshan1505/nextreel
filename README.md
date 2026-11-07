@@ -4,7 +4,10 @@ So NextReel is a SASRec movie recommender that predicts the next movie a user wi
 <hr>
 Given all the movies that user has watched, in order, rank every movie in the catalog by how likely it is to be the next one they watch. 
 
-$$\hat{s}_{n+1} = \arg\max_{i \in \mathrm{I} \setminus S_u} P\left(i \mid s_1, s_2, \ldots, s_n\right)$$
+```math
+\hat{s}_{n+1} = \arg\max_{i \in \mathrm{I} \setminus S_u} P\left(i \mid s_1, s_2, \ldots, s_n\right)
+```
+
 In the above equation S= s1,s2,...,sn are like the user u's watch history in time order, and the catalog minus already-watched movies in the candidate set.
 
 ### Project structure
