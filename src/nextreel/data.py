@@ -28,3 +28,11 @@ def filter_min_interactions(ratings, min_count=5):
         if keep.all():
             return ratings.reset_index(drop=True)
         ratings = ratings[keep]
+
+
+def sort_by_time(ratings):
+    return ratings.sort_values(["user_id", "timestamp"], kind="stable").reset_index(drop=True)
+
+
+def build_sequences(ratings):
+    return ratings.groupby("user", sort=True)["item"].agg(list).tolist()
