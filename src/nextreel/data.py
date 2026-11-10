@@ -8,6 +8,7 @@ import pandas as pd
 
 RATING_COLUMNS = ["user_id", "movie_id", "rating", "timestamp"]
 MOVIE_COLUMNS = ["movie_id", "title", "genres"]
+YEAR_PATTERN = r"\s*\((\d{4})\)\s*$"
 
 
 def read_dat(path, names):
@@ -19,7 +20,13 @@ def load_ratings(data_dir):
 
 
 def load_movies(data_dir):
-    return read_dat(Path(data_dir) / "movies.dat", MOVIE_COLUMNS)
+    movies = read_dat(Path(data_dir) / "movies.dat", MOVIE_COLUMNS)
+    year = movies["title"].str.extract(YEAR_PATTERN, expand=False)
+    return movies.assign(
+        name=movies["title"].str.replace(YEAR_PATTERN, "", regex=True).str.strip(),
+        year=pd.to_numeric(year, errors="coerce").astype("Int64"),
+        genres=movies["genres"].str.split("|"),
+    )
 
 
 def filter_min_interactions(ratings, min_count=5):
