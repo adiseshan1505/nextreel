@@ -82,3 +82,29 @@ def leave_one_out(sequences):
         valid.append(seq[-2])
         test.append(seq[-1])
     return Split(train, valid, test)
+
+
+@dataclass
+class MovieLens:
+    split: Split
+    n_users: int
+    n_items: int
+    user_map: dict
+    item_map: dict
+    movies: pd.DataFrame
+
+    def item_counts(self):
+        return np.bincount(np.concatenate(self.split.train), minlength=self.n_items + 1)
+
+    def title(self, item):
+        return self.movies.at[item, "title"]
+
+
+def load_movielens(data_dir, min_interactions=5):
+    ratings = filter_min_interactions(load_ratings(data_dir), min_interactions)
+    ratings, user_map, item_map = remap_ids(sort_by_time(ratings))
+    split = leave_one_out(build_sequences(ratings))
+    movies = load_movies(data_dir)
+    movies = movies[movies["movie_id"].isin(item_map)]
+    movies = movies.assign(item=movies["movie_id"].map(item_map)).set_index("item").sort_index()
+    return MovieLens(split, len(user_map), len(item_map), user_map, item_map, movies)
