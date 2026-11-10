@@ -2,6 +2,7 @@
 
 from pathlib import Path
 
+import numpy as np
 import pandas as pd
 
 RATING_COLUMNS = ["user_id", "movie_id", "rating", "timestamp"]
@@ -32,6 +33,18 @@ def filter_min_interactions(ratings, min_count=5):
 
 def sort_by_time(ratings):
     return ratings.sort_values(["user_id", "timestamp"], kind="stable").reset_index(drop=True)
+
+
+def remap_ids(ratings):
+    user_ids = np.sort(ratings["user_id"].unique())
+    movie_ids = np.sort(ratings["movie_id"].unique())
+    user_map = {int(u): i for i, u in enumerate(user_ids)}
+    item_map = {int(m): i + 1 for i, m in enumerate(movie_ids)}
+    ratings = ratings.assign(
+        user=ratings["user_id"].map(user_map),
+        item=ratings["movie_id"].map(item_map),
+    )
+    return ratings, user_map, item_map
 
 
 def build_sequences(ratings):
