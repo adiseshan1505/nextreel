@@ -1,5 +1,6 @@
 """Load ratings, sort by time, remap ids and make the leave-one-out split."""
 
+from dataclasses import dataclass
 from pathlib import Path
 
 import numpy as np
@@ -49,3 +50,28 @@ def remap_ids(ratings):
 
 def build_sequences(ratings):
     return ratings.groupby("user", sort=True)["item"].agg(list).tolist()
+
+
+@dataclass
+class Split:
+    train: list
+    valid: list
+    test: list
+
+    def histories(self, stage):
+        if stage == "valid":
+            return self.train, self.valid
+        if stage == "test":
+            return [seq + [v] for seq, v in zip(self.train, self.valid)], self.test
+        raise ValueError(f"unknown stage {stage!r}")
+
+
+def leave_one_out(sequences):
+    train, valid, test = [], [], []
+    for seq in sequences:
+        if len(seq) < 3:
+            raise ValueError("every user needs at least 3 interactions")
+        train.append(list(seq[:-2]))
+        valid.append(seq[-2])
+        test.append(seq[-1])
+    return Split(train, valid, test)
