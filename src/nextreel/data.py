@@ -18,3 +18,13 @@ def load_ratings(data_dir):
 
 def load_movies(data_dir):
     return read_dat(Path(data_dir) / "movies.dat", MOVIE_COLUMNS)
+
+
+def filter_min_interactions(ratings, min_count=5):
+    while True:
+        user_counts = ratings["user_id"].map(ratings["user_id"].value_counts())
+        movie_counts = ratings["movie_id"].map(ratings["movie_id"].value_counts())
+        keep = (user_counts >= min_count) & (movie_counts >= min_count)
+        if keep.all():
+            return ratings.reset_index(drop=True)
+        ratings = ratings[keep]
