@@ -26,3 +26,7 @@ class TrainSequences(Dataset):
         inputs = pad_left(seq[:-1], self.max_len)
         targets = pad_left(seq[1:], self.max_len)
         return torch.from_numpy(inputs), torch.from_numpy(targets)
+
+
+def sequence_batch(histories, users, max_len):
+    return torch.from_numpy(np.stack([pad_left(histories[u], max_len) for u in users]))
