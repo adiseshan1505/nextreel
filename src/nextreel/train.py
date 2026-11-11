@@ -1,6 +1,7 @@
 """Training loop with early stopping on validation NDCG@10."""
 
 import copy
+import json
 import random
 import time
 from pathlib import Path
@@ -9,7 +10,9 @@ import numpy as np
 import torch
 import yaml
 
+from .data import load_movielens
 from .dataset import sequence_batch, train_loader
+from .evaluate import Evaluator
 from .models import BPRMF, GRURec, ItemToItem, Popularity, SASRec, TripletSampler
 
 DEFAULTS = {
@@ -166,3 +169,50 @@ def fit(model, ml, cfg, evaluator, seed=0, device="cpu", log=print):
     model.load_state_dict(best_state)
     model.eval()
     return {"best_epoch": best_epoch, "best_valid": best_score, "history": history}
+
+
+def build_evaluators(ml, cfg):
+    e = cfg["evaluation"]
+    counts = ml.item_counts()
+    return {
+        stage: Evaluator(*ml.split.histories(stage), counts, e["k"], e["n_negatives"], e["seed"])
+        for stage in ("valid", "test")
+    }
+
+
+def save_run(out_dir, model, cfg, ml, result):
+    out_dir.mkdir(parents=True, exist_ok=True)
+    (out_dir / "metrics.json").write_text(json.dumps(result, indent=2))
+    (out_dir / "config.yaml").write_text(yaml.safe_dump(cfg, sort_keys=False))
+    if isinstance(model, torch.nn.Module):
+        torch.save(
+            {
+                "config": cfg,
+                "n_users": ml.n_users,
+                "n_items": ml.n_items,
+                "state_dict": model.cpu().state_dict(),
+            },
+            out_dir / "model.pt",
+        )
+
+
+def run(cfg, ml, seed, device="cpu", log=print):
+    set_seed(seed)
+    evaluators = build_evaluators(ml, cfg)
+    model = build_model(cfg, ml.n_users, ml.n_items)
+    summary = fit(model, ml, cfg, evaluators["valid"], seed, device, log)
+    max_len, batch_size = cfg["model"]["max_len"], cfg["evaluation"]["batch_size"]
+    scores = {}
+    for stage, evaluator in evaluators.items():
+        histories, _ = ml.split.histories(stage)
+        scores[stage] = evaluator.evaluate(make_scorer(model, histories, max_len, device), batch_size)
+    result = {
+        "name": cfg["name"],
+        "model": cfg["model"]["name"],
+        "seed": seed,
+        **summary,
+        "valid": scores["valid"],
+        "test": scores["test"],
+    }
+    save_run(Path(cfg["output"]["dir"]) / cfg["name"] / f"seed{seed}", model, cfg, ml, result)
+    return result
