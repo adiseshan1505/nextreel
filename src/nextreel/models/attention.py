@@ -29,3 +29,33 @@ class CausalSelfAttention(nn.Module):
         h = self.dropout(weights) @ v
         h = h.transpose(1, 2).reshape(b, length, d)
         return self.out(h), weights
+
+
+class FeedForward(nn.Module):
+    def __init__(self, d, dropout=0.0):
+        super().__init__()
+        self.net = nn.Sequential(
+            nn.Linear(d, d),
+            nn.ReLU(),
+            nn.Dropout(dropout),
+            nn.Linear(d, d),
+        )
+
+    def forward(self, x):
+        return self.net(x)
+
+
+class TransformerBlock(nn.Module):
+    def __init__(self, d, n_heads, dropout=0.0):
+        super().__init__()
+        self.attn_norm = nn.LayerNorm(d)
+        self.attn = CausalSelfAttention(d, n_heads, dropout)
+        self.ffn_norm = nn.LayerNorm(d)
+        self.ffn = FeedForward(d, dropout)
+        self.dropout = nn.Dropout(dropout)
+
+    def forward(self, x, pad_mask):
+        h, weights = self.attn(self.attn_norm(x), pad_mask)
+        x = x + self.dropout(h)
+        x = x + self.dropout(self.ffn(self.ffn_norm(x)))
+        return x * pad_mask.unsqueeze(-1), weights
