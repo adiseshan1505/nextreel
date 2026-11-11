@@ -8,7 +8,8 @@ import numpy as np
 import torch
 import yaml
 
-from .models import BPRMF, GRURec, ItemToItem, Popularity, SASRec
+from .dataset import sequence_batch, train_loader
+from .models import BPRMF, GRURec, ItemToItem, Popularity, SASRec, TripletSampler
 
 DEFAULTS = {
     "data": {"dir": "data/ml-1m", "min_interactions": 5},
@@ -75,3 +76,17 @@ def build_model(cfg, n_users, n_items):
     if name == "item2item":
         return ItemToItem(n_items)
     raise ValueError(f"unknown model {name!r}")
+
+
+def make_scorer(model, histories, max_len, device="cpu"):
+    if isinstance(model, (SASRec, GRURec)):
+        def score(users):
+            seq = sequence_batch(histories, users, max_len).to(device)
+            return model.predict(seq).cpu()
+    elif isinstance(model, BPRMF):
+        def score(users):
+            return model.predict(torch.as_tensor(users, device=device)).cpu()
+    else:
+        def score(users):
+            return model.predict([histories[u] for u in users])
+    return score
