@@ -48,3 +48,17 @@ def sampled_ranks(scores, targets, negatives, generator=None):
     candidates = torch.cat([targets[:, None], negatives], dim=1)
     first = torch.zeros(len(targets), dtype=torch.long)
     return target_ranks(scores.gather(1, candidates), first, generator)
+
+
+def coverage(recommended, n_items):
+    return len(np.unique(recommended)) / n_items
+
+
+def popularity_percentile(item_counts):
+    counts = np.asarray(item_counts[1:])
+    percentile = np.searchsorted(np.sort(counts), counts, side="left") / len(counts)
+    return np.concatenate([[0.0], percentile])
+
+
+def popularity_bias(recommended, percentile):
+    return float(np.mean(percentile[recommended]))
