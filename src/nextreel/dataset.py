@@ -2,7 +2,7 @@
 
 import numpy as np
 import torch
-from torch.utils.data import Dataset
+from torch.utils.data import DataLoader, Dataset
 
 
 def pad_left(seq, max_len):
@@ -30,3 +30,13 @@ class TrainSequences(Dataset):
 
 def sequence_batch(histories, users, max_len):
     return torch.from_numpy(np.stack([pad_left(histories[u], max_len) for u in users]))
+
+
+def train_loader(sequences, max_len, batch_size, seed=0):
+    generator = torch.Generator().manual_seed(seed)
+    return DataLoader(
+        TrainSequences(sequences, max_len),
+        batch_size=batch_size,
+        shuffle=True,
+        generator=generator,
+    )
