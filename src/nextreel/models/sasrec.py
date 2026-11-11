@@ -1,6 +1,7 @@
 """SASRec: causal self-attention over movie ids."""
 
 import torch
+import torch.nn.functional as F
 from torch import nn
 
 from .attention import TransformerBlock
@@ -34,6 +35,12 @@ class SASRec(nn.Module):
         for block in self.blocks:
             x, _ = block(x, pad_mask)
         return self.norm(x)
+
+    def loss(self, seq, targets):
+        hidden = self.encode(seq)
+        mask = targets > 0
+        logits = hidden[mask] @ self.item_emb.weight[1:].T
+        return F.cross_entropy(logits, targets[mask] - 1)
 
     @torch.no_grad()
     def predict(self, seq):
