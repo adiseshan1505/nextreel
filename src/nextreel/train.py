@@ -2,6 +2,7 @@
 
 import copy
 import random
+import time
 from pathlib import Path
 
 import numpy as np
@@ -122,3 +123,46 @@ def train_mf_epoch(model, sampler, batch_size, optimiser, device):
         total += loss.item()
         batches += 1
     return total / max(batches, 1)
+
+
+def fit(model, ml, cfg, evaluator, seed=0, device="cpu", log=print):
+    t, k = cfg["training"], cfg["evaluation"]["k"]
+    if isinstance(model, (Popularity, ItemToItem)):
+        model.fit(ml.split.train)
+        return {"best_epoch": 0, "best_valid": None, "history": []}
+    model.to(device)
+    optimiser = torch.optim.Adam(model.parameters(), lr=t["lr"], weight_decay=t["weight_decay"])
+    max_len = cfg["model"]["max_len"]
+    if isinstance(model, BPRMF):
+        sampler = TripletSampler(ml.split.train, ml.n_items, seed)
+
+        def step():
+            return train_mf_epoch(model, sampler, t["batch_size"], optimiser, device)
+    else:
+        loader = train_loader(ml.split.train, max_len, t["batch_size"], seed)
+
+        def step():
+            return train_sequence_epoch(model, loader, optimiser, device)
+
+    histories, _ = ml.split.histories("valid")
+    key = f"ndcg@{k}"
+    best_score, best_epoch, best_state, waited, history = -1.0, 0, None, 0, []
+    for epoch in range(1, t["max_epochs"] + 1):
+        start = time.time()
+        loss = step()
+        model.eval()
+        scorer = make_scorer(model, histories, max_len, device)
+        metrics = evaluator.evaluate(scorer, cfg["evaluation"]["batch_size"], sampled=False)
+        history.append({"epoch": epoch, "loss": loss, **metrics})
+        log(f"epoch {epoch:3d}  loss {loss:.4f}  valid {key} {metrics[key]:.4f}  {time.time() - start:.0f}s")
+        if metrics[key] > best_score:
+            best_score, best_epoch, waited = metrics[key], epoch, 0
+            best_state = copy.deepcopy(model.state_dict())
+        else:
+            waited += 1
+            if waited >= t["early_stopping_patience"]:
+                log(f"early stop, best epoch {best_epoch}")
+                break
+    model.load_state_dict(best_state)
+    model.eval()
+    return {"best_epoch": best_epoch, "best_valid": best_score, "history": history}
