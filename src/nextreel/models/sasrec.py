@@ -29,12 +29,15 @@ class SASRec(nn.Module):
         x = self.item_emb(seq) + self.pos_emb(positions)
         return self.emb_dropout(x) * (seq > 0).unsqueeze(-1)
 
-    def encode(self, seq):
+    def encode(self, seq, return_attention=False):
         pad_mask = seq > 0
         x = self.embed(seq)
+        attentions = []
         for block in self.blocks:
-            x, _ = block(x, pad_mask)
-        return self.norm(x)
+            x, weights = block(x, pad_mask)
+            attentions.append(weights)
+        x = self.norm(x)
+        return (x, attentions) if return_attention else x
 
     def loss(self, seq, targets):
         hidden = self.encode(seq)
