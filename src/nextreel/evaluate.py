@@ -31,3 +31,20 @@ def target_ranks(scores, targets, generator=None):
     ties = (scores == target_scores).sum(1) - 1
     offset = (torch.rand(len(targets), generator=generator) * (ties + 1)).floor().long()
     return (higher + 1 + offset).numpy()
+
+
+def sample_negatives(histories, targets, n_items, n_negatives, rng):
+    negatives = np.empty((len(targets), n_negatives), dtype=np.int64)
+    for i, (history, target) in enumerate(zip(histories, targets)):
+        seen = np.zeros(n_items + 1, dtype=bool)
+        seen[0] = True
+        seen[np.asarray(history, dtype=np.int64)] = True
+        seen[target] = True
+        negatives[i] = rng.choice(np.flatnonzero(~seen), n_negatives, replace=False)
+    return negatives
+
+
+def sampled_ranks(scores, targets, negatives, generator=None):
+    candidates = torch.cat([targets[:, None], negatives], dim=1)
+    first = torch.zeros(len(targets), dtype=torch.long)
+    return target_ranks(scores.gather(1, candidates), first, generator)
