@@ -90,3 +90,35 @@ def make_scorer(model, histories, max_len, device="cpu"):
         def score(users):
             return model.predict([histories[u] for u in users])
     return score
+
+
+def train_sequence_epoch(model, loader, optimiser, device):
+    model.train()
+    total, batches = 0.0, 0
+    for seq, targets in loader:
+        optimiser.zero_grad()
+        loss = model.loss(seq.to(device), targets.to(device))
+        loss.backward()
+        optimiser.step()
+        total += loss.item()
+        batches += 1
+    return total / max(batches, 1)
+
+
+def train_mf_epoch(model, sampler, batch_size, optimiser, device):
+    model.train()
+    users, positives, negatives = (torch.as_tensor(x) for x in sampler.sample())
+    total, batches = 0.0, 0
+    for start in range(0, len(users), batch_size):
+        end = start + batch_size
+        optimiser.zero_grad()
+        loss = model.loss(
+            users[start:end].to(device),
+            positives[start:end].to(device),
+            negatives[start:end].to(device),
+        )
+        loss.backward()
+        optimiser.step()
+        total += loss.item()
+        batches += 1
+    return total / max(batches, 1)
