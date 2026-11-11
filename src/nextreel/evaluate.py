@@ -62,3 +62,46 @@ def popularity_percentile(item_counts):
 
 def popularity_bias(recommended, percentile):
     return float(np.mean(percentile[recommended]))
+
+
+class Evaluator:
+    def __init__(self, histories, targets, item_counts, k=10, n_negatives=100, seed=0):
+        self.histories = histories
+        self.targets = np.asarray(targets, dtype=np.int64)
+        self.n_items = len(item_counts) - 1
+        self.k = k
+        self.seed = seed
+        self.percentile = popularity_percentile(item_counts)
+        self.negatives = None
+        if n_negatives:
+            rng = np.random.default_rng(seed)
+            self.negatives = sample_negatives(histories, self.targets, self.n_items, n_negatives, rng)
+
+    def evaluate(self, score_fn, batch_size=256, sampled=True):
+        generator = torch.Generator().manual_seed(self.seed)
+        sampled = sampled and self.negatives is not None
+        ranks, sampled_rank_list, recommended = [], [], []
+        for start in range(0, len(self.targets), batch_size):
+            users = np.arange(start, min(start + batch_size, len(self.targets)))
+            scores = torch.as_tensor(score_fn(users), dtype=torch.float32)
+            targets = torch.as_tensor(self.targets[users])
+            if sampled:
+                negatives = torch.as_tensor(self.negatives[users])
+                sampled_rank_list.append(sampled_ranks(scores, targets, negatives, generator))
+            masked = mask_history(scores, [self.histories[u] for u in users], targets)
+            ranks.append(target_ranks(masked, targets, generator))
+            recommended.append(masked.topk(self.k, dim=1).indices.numpy())
+        ranks = np.concatenate(ranks)
+        recommended = np.concatenate(recommended)
+        k = self.k
+        metrics = {
+            f"hr@{k}": hit_rate(ranks, k),
+            f"ndcg@{k}": ndcg(ranks, k),
+            f"coverage@{k}": coverage(recommended, self.n_items),
+            f"popularity@{k}": popularity_bias(recommended, self.percentile),
+        }
+        if sampled:
+            sampled_rank_array = np.concatenate(sampled_rank_list)
+            metrics[f"sampled_hr@{k}"] = hit_rate(sampled_rank_array, k)
+            metrics[f"sampled_ndcg@{k}"] = ndcg(sampled_rank_array, k)
+        return metrics
