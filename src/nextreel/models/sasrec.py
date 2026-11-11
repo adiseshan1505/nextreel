@@ -34,3 +34,10 @@ class SASRec(nn.Module):
         for block in self.blocks:
             x, _ = block(x, pad_mask)
         return self.norm(x)
+
+    @torch.no_grad()
+    def predict(self, seq):
+        hidden = self.encode(seq)[:, -1]
+        scores = hidden @ self.item_emb.weight.T
+        scores[:, 0] = float("-inf")
+        return scores
