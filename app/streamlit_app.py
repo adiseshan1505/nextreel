@@ -5,6 +5,7 @@ import sys
 from pathlib import Path
 
 import numpy as np
+import pandas as pd
 import streamlit as st
 import torch
 
@@ -13,6 +14,7 @@ sys.path.insert(0, str(ROOT / "src"))
 
 from nextreel.data import load_movielens
 from nextreel.dataset import sequence_batch
+from nextreel.explain import attention_rollout, because_you_watched, explanation_text
 from nextreel.models import Popularity
 from nextreel.train import load_model
 
@@ -110,3 +112,15 @@ if sasrec is None:
     st.stop()
 
 show_list(sasrec_col, "NextReel", top_k(sequence_scores(sasrec, picks), picks))
+sasrec_col.caption(explanation_text(because_you_watched(sasrec, picks, top_n=1), ml.title))
+
+st.subheader("Where NextReel looked")
+weights = attention_rollout(sasrec, picks)
+st.dataframe(
+    pd.DataFrame({"Movie": [ml.title(i) for i in picks], "Attention": weights}),
+    hide_index=True,
+    column_config={
+        "Attention": st.column_config.ProgressColumn(min_value=0.0, max_value=1.0, format="%.2f"),
+    },
+)
+st.caption("Attention shows where the model looked, not exactly why it chose a movie.")
