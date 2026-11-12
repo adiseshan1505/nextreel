@@ -1,0 +1,5 @@
+model:
+  name: popularity
+
+training:
+  n_seeds: 1

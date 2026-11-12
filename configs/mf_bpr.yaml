@@ -1,0 +1,9 @@
+model:
+  name: mf_bpr
+  d: 64
+
+training:
+  loss: bpr
+  batch_size: 1024
+  lr: 0.001
+  weight_decay: 0.0

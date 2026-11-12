@@ -1,0 +1,5 @@
+model:
+  name: item2item
+
+training:
+  n_seeds: 1
