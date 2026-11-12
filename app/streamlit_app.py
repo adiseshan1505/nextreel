@@ -6,11 +6,13 @@ from pathlib import Path
 
 import numpy as np
 import streamlit as st
+import torch
 
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "src"))
 
 from nextreel.data import load_movielens
+from nextreel.dataset import sequence_batch
 from nextreel.models import Popularity
 from nextreel.train import load_model
 
@@ -47,6 +49,16 @@ def top_k(scores, picks, k=TOP_K):
     return [int(i) for i in np.argsort(-scores, kind="stable")[:k]]
 
 
+def sequence_scores(model, picks):
+    seq = sequence_batch([picks], [0], model.max_len)
+    return model.predict(seq)[0].numpy()
+
+
+def show_list(column, heading, items):
+    column.subheader(heading)
+    column.markdown("\n".join(f"{rank}. {ml.title(item)}" for rank, item in enumerate(items, 1)))
+
+
 st.set_page_config(page_title="NextReel", layout="wide")
 st.title("NextReel")
 st.caption("Pick the movies you watched, in order, and get the next 10.")
@@ -72,3 +84,13 @@ if len(picks) < N_PICKS:
     st.stop()
 
 st.markdown("**Watch order:** " + " → ".join(ml.title(i) for i in picks))
+
+sasrec = load_trained("sasrec")
+if sasrec is None:
+    st.warning(
+        "No trained NextReel model in runs/sasrec yet. "
+        "Run `python -m nextreel.train --config configs/sasrec.yaml` first."
+    )
+    st.stop()
+
+show_list(st, "NextReel", top_k(sequence_scores(sasrec, picks), picks))
