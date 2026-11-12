@@ -219,6 +219,13 @@ def run(cfg, ml, seed, device="cpu", log=print):
     return result
 
 
+def load_model(path, device="cpu"):
+    checkpoint = torch.load(path, map_location=device, weights_only=True)
+    model = build_model(checkpoint["config"], checkpoint["n_users"], checkpoint["n_items"])
+    model.load_state_dict(checkpoint["state_dict"])
+    return model.to(device).eval(), checkpoint["config"]
+
+
 def parse_args(argv=None):
     parser = argparse.ArgumentParser(description="Train and evaluate a NextReel model.")
     parser.add_argument("--config", default="configs/sasrec.yaml")
