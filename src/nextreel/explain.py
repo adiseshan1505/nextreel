@@ -30,3 +30,24 @@ def attention_rollout(model, history):
         rollout = (mixed / mixed.sum(-1, keepdim=True)) @ rollout
     n = min(len(history), model.max_len)
     return rollout[-1, -n:].numpy()
+
+
+def because_you_watched(model, history, top_n=3, method="rollout"):
+    if method == "rollout":
+        weights = attention_rollout(model, history)
+    elif method == "last":
+        weights = last_step_attention(model, history)
+    else:
+        raise ValueError(f"unknown method {method!r}")
+    items = list(history)[-len(weights):]
+    order = np.argsort(-weights, kind="stable")[:top_n]
+    return [(items[i], float(weights[i])) for i in order]
+
+
+def explanation_text(reasons, title):
+    if not reasons:
+        return ""
+    names = [title(item) for item, _ in reasons]
+    if len(names) == 1:
+        return f"Because you watched {names[0]}"
+    return f"Because you watched {', '.join(names[:-1])} and {names[-1]}"
