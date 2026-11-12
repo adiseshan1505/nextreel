@@ -156,15 +156,34 @@ PYTHONPATH=src python -m nextreel.report
 
 ### Project structure
 
-These files are only skeletons for now.
+```
+configs/                one YAML per model; unset keys fall back to the SASRec defaults
+src/nextreel/
+    data.py             load MovieLens, sort by time, remap ids, leave-one-out split
+    dataset.py          left-padded sequences and next-movie targets
+    models/
+        attention.py    hand-written causal self-attention that returns its weights
+        sasrec.py       NextReel's Transformer
+        baselines.py    most popular and item-to-item
+        mf_bpr.py       BPR matrix factorisation
+        gru.py          GRU baseline
+    evaluate.py         full-catalog and sampled HR@K and NDCG@K, coverage, popularity bias
+    train.py            training loop, early stopping, checkpoints and the CLI
+    explain.py          "because you watched" from attention rollout
+    report.py           mean ± std over seeds into results/results.md
+app/                    Streamlit demo
+tests/                  unit tests and a tiny end-to-end run on toy data
+results/                results table
+runs/                   checkpoints and metrics, not committed
+```
 
+### Tests
+
+```bash
+pytest
 ```
-configs/        model and training settings
-src/nextreel/   data pipeline, models, training, evaluation and explanations
-app/            Streamlit demo
-tests/          split and metric tests
-results/        results table
-```
+
+The tests use small hand-made data, so they run in a few seconds and never train on MovieLens. The leakage check on the real split runs only when `data/ml-1m` is present.
 
 ### Limitations
 
