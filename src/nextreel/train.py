@@ -1,5 +1,6 @@
 """Training loop with early stopping on validation NDCG@10."""
 
+import argparse
 import copy
 import json
 import random
@@ -216,3 +217,37 @@ def run(cfg, ml, seed, device="cpu", log=print):
     }
     save_run(Path(cfg["output"]["dir"]) / cfg["name"] / f"seed{seed}", model, cfg, ml, result)
     return result
+
+
+def parse_args(argv=None):
+    parser = argparse.ArgumentParser(description="Train and evaluate a NextReel model.")
+    parser.add_argument("--config", default="configs/sasrec.yaml")
+    parser.add_argument("--seeds", type=int, nargs="+")
+    parser.add_argument("--device", default="cuda" if torch.cuda.is_available() else "cpu")
+    parser.add_argument("--max-epochs", type=int)
+    parser.add_argument("--data-dir")
+    parser.add_argument("--out-dir")
+    return parser.parse_args(argv)
+
+
+def main(argv=None):
+    args = parse_args(argv)
+    cfg = load_config(args.config)
+    if args.max_epochs:
+        cfg["training"]["max_epochs"] = args.max_epochs
+    if args.data_dir:
+        cfg["data"]["dir"] = args.data_dir
+    if args.out_dir:
+        cfg["output"]["dir"] = args.out_dir
+    seeds = args.seeds or list(range(cfg["training"]["n_seeds"]))
+    ml = load_movielens(cfg["data"]["dir"], cfg["data"]["min_interactions"])
+    print(f"{cfg['name']}: {ml.n_users} users, {ml.n_items} movies, seeds {seeds}")
+    k = cfg["evaluation"]["k"]
+    for seed in seeds:
+        result = run(cfg, ml, seed, args.device)
+        test = result["test"]
+        print(f"seed {seed}  test hr@{k} {test[f'hr@{k}']:.4f}  ndcg@{k} {test[f'ndcg@{k}']:.4f}")
+
+
+if __name__ == "__main__":
+    main()
