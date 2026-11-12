@@ -18,3 +18,15 @@ def last_step_attention(model, history, layer=-1):
     weights = attentions[layer][0, :, -1].mean(0)
     n = min(len(history), model.max_len)
     return weights[-n:].numpy()
+
+
+def attention_rollout(model, history):
+    attentions = encode_history(model, history)
+    length = attentions[0].size(-1)
+    eye = torch.eye(length)
+    rollout = eye
+    for weights in attentions:
+        mixed = 0.5 * weights[0].mean(0) + 0.5 * eye
+        rollout = (mixed / mixed.sum(-1, keepdim=True)) @ rollout
+    n = min(len(history), model.max_len)
+    return rollout[-1, -n:].numpy()
