@@ -56,3 +56,19 @@ if not DATA_DIR.exists():
     st.stop()
 
 ml = load_data()
+counts = ml.item_counts()
+options = [int(i) for i in np.argsort(-counts[1:], kind="stable") + 1]
+
+picks = st.multiselect(
+    f"Pick {N_PICKS} movies in the order you watched them",
+    options,
+    format_func=ml.title,
+    max_selections=N_PICKS,
+    key="picks",
+)
+
+if len(picks) < N_PICKS:
+    st.info(f"Pick {N_PICKS - len(picks)} more.")
+    st.stop()
+
+st.markdown("**Watch order:** " + " → ".join(ml.title(i) for i in picks))
