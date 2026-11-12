@@ -3,6 +3,8 @@
 import os
 import random
 import sys
+import urllib.request
+import zipfile
 from pathlib import Path
 
 import numpy as np
@@ -21,8 +23,21 @@ from nextreel.train import load_model
 
 DATA_DIR = Path(os.environ.get("NEXTREEL_DATA_DIR", ROOT / "data" / "ml-1m"))
 RUNS_DIR = Path(os.environ.get("NEXTREEL_RUNS_DIR", ROOT / "runs"))
+DATA_URL = "https://files.grouplens.org/datasets/movielens/ml-1m.zip"
 N_PICKS = 5
 TOP_K = 10
+
+
+@st.cache_resource(show_spinner="Downloading MovieLens 1M from GroupLens...")
+def ensure_data():
+    if DATA_DIR.exists():
+        return
+    DATA_DIR.parent.mkdir(parents=True, exist_ok=True)
+    archive = DATA_DIR.parent / "ml-1m.zip"
+    urllib.request.urlretrieve(DATA_URL, archive)
+    with zipfile.ZipFile(archive) as z:
+        z.extractall(DATA_DIR.parent)
+    archive.unlink()
 
 
 @st.cache_resource
@@ -97,6 +112,11 @@ st.set_page_config(page_title="NextReel", layout="wide")
 st.title("NextReel")
 st.caption("Pick the movies you watched, in order, and get the next 10.")
 
+try:
+    ensure_data()
+except OSError as error:
+    st.error(f"Could not download MovieLens 1M into {DATA_DIR}: {error}")
+    st.stop()
 if not DATA_DIR.exists():
     st.error(f"MovieLens 1M not found in {DATA_DIR}. See the README to download it.")
     st.stop()

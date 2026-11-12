@@ -111,21 +111,20 @@ A Streamlit app lets anyone:
 streamlit run app/streamlit_app.py
 ```
 
-The app uses the first seed's checkpoints in `runs/sasrec/` and `runs/mf_bpr/`, so train those first. Most popular works without any training. Matrix factorisation has no vector for a new user, so the app averages the vectors of the picked movies, which ignores their order.
+The app uses the first seed's checkpoints in `runs/sasrec/` and `runs/mf_bpr/`, so train those first. If `data/ml-1m` is missing, the app downloads it from GroupLens on first start. Most popular works without any training. Matrix factorisation has no vector for a new user, so the app averages the vectors of the picked movies, which ignores their order.
 
 ### Quick start
 
-Set up a Python 3.11+ environment. Install the CPU-only PyTorch build first, since it is a much smaller download, then the rest from `requirements.txt`:
+Set up a Python 3.11+ environment. `requirements.txt` points pip at the CPU-only PyTorch build, which is a much smaller download:
 
 ```bash
 python3 -m venv .venv
 source .venv/bin/activate
 pip install --upgrade pip
-pip install torch --index-url https://download.pytorch.org/whl/cpu
 pip install -r requirements.txt
 ```
 
-With an NVIDIA GPU, skip the CPU-only line and let `requirements.txt` install the default PyTorch build, then train with `--device cuda`.
+With an NVIDIA GPU, run `pip install torch` first to get the default CUDA build; `requirements.txt` then keeps it. Train with `--device cuda`.
 
 Download the dataset:
 
