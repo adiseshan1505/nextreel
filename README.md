@@ -100,12 +100,18 @@ Not available yet. Once training is done, `python -m nextreel.report` fills [res
 
 ### Demo
 
-Coming soon. A Streamlit app will let anyone:
+A Streamlit app lets anyone:
 
 - pick 5 movies they like and get a top 10 straight away, with no retraining;
 - compare Most popular, matrix factorisation and NextReel side by side;
 - see a "because you watched X" hint from the attention weights;
 - shuffle their picks to see the top 10 change, showing that order matters.
+
+```bash
+streamlit run app/streamlit_app.py
+```
+
+The app uses the first seed's checkpoints in `runs/sasrec/` and `runs/mf_bpr/`, so train those first. Most popular works without any training. Matrix factorisation has no vector for a new user, so the app averages the vectors of the picked movies, which ignores their order.
 
 ### Quick start
 
