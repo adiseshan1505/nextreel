@@ -1,6 +1,7 @@
 """Streamlit demo: pick 5 movies, get a top 10."""
 
 import os
+import random
 import sys
 from pathlib import Path
 
@@ -62,9 +63,34 @@ def mf_scores(model, picks):
         return (model.item_emb.weight @ user).numpy()
 
 
-def show_list(column, heading, items):
+def shuffle_picks():
+    picks = list(st.session_state.picks)
+    shuffled = picks[:]
+    while len(picks) > 1 and shuffled == picks:
+        random.shuffle(shuffled)
+    st.session_state.picks = shuffled
+    st.session_state.previous = st.session_state.get("current")
+
+
+def movement(item, rank, previous):
+    if previous is None:
+        return ""
+    if item not in previous:
+        return " *(new)*"
+    delta = previous.index(item) + 1 - rank
+    if delta > 0:
+        return f" ↑{delta}"
+    if delta < 0:
+        return f" ↓{-delta}"
+    return ""
+
+
+def show_list(column, heading, items, previous=None):
     column.subheader(heading)
-    column.markdown("\n".join(f"{rank}. {ml.title(item)}" for rank, item in enumerate(items, 1)))
+    column.markdown("\n".join(
+        f"{rank}. {ml.title(item)}{movement(item, rank, previous)}"
+        for rank, item in enumerate(items, 1)
+    ))
 
 
 st.set_page_config(page_title="NextReel", layout="wide")
@@ -92,6 +118,7 @@ if len(picks) < N_PICKS:
     st.stop()
 
 st.markdown("**Watch order:** " + " → ".join(ml.title(i) for i in picks))
+st.button("Shuffle the order", on_click=shuffle_picks)
 
 sasrec = load_trained("sasrec")
 mf = load_trained("mf_bpr")
@@ -111,7 +138,12 @@ if sasrec is None:
     sasrec_col.info("Train it with `python -m nextreel.train --config configs/sasrec.yaml`.")
     st.stop()
 
-show_list(sasrec_col, "NextReel", top_k(sequence_scores(sasrec, picks), picks))
+current = top_k(sequence_scores(sasrec, picks), picks)
+previous = st.session_state.pop("previous", None)
+show_list(sasrec_col, "NextReel", current, previous)
+st.session_state.current = current
+if previous is not None:
+    st.caption("Same movies, new order: arrows show how NextReel's top 10 moved.")
 sasrec_col.caption(explanation_text(because_you_watched(sasrec, picks, top_n=1), ml.title))
 
 st.subheader("Where NextReel looked")
