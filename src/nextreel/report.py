@@ -50,12 +50,25 @@ def render(results, k=10):
         [LABELS.get(name, name), *metric_row(results[name], metrics), str(len(results[name]))]
         for name in ordered(results)
     ]
+    sampled_header = ["Model", f"HR@{k} full", f"HR@{k} sampled", f"NDCG@{k} full", f"NDCG@{k} sampled"]
+    sampled_metrics = [f"hr@{k}", f"sampled_hr@{k}", f"ndcg@{k}", f"sampled_ndcg@{k}"]
+    sampled_rows = [
+        [LABELS.get(name, name), *metric_row(results[name], sampled_metrics)]
+        for name in ordered(results)
+        if all(m in results[name][0]["test"] for m in sampled_metrics)
+    ]
     return "\n".join([
         "# Results",
         "",
         "Full-catalogue test metrics, mean ± std over seeds.",
         "",
         markdown_table(header, rows),
+        "",
+        "## Full catalogue vs 100 sampled negatives",
+        "",
+        "The same test targets ranked against every unwatched movie and against 100 random unwatched ones.",
+        "",
+        markdown_table(sampled_header, sampled_rows),
         "",
     ])
 
