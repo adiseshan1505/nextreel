@@ -115,14 +115,17 @@ The app uses the first seed's checkpoints in `runs/sasrec/` and `runs/mf_bpr/`, 
 
 ### Quick start
 
-Set up a Python 3.11+ environment. The CPU-only PyTorch build is a much smaller download:
+Set up a Python 3.11+ environment. Install the CPU-only PyTorch build first, since it is a much smaller download, then the rest from `requirements.txt`:
 
 ```bash
 python3 -m venv .venv
 source .venv/bin/activate
+pip install --upgrade pip
 pip install torch --index-url https://download.pytorch.org/whl/cpu
-pip install numpy pandas pyyaml streamlit pytest
+pip install -r requirements.txt
 ```
+
+With an NVIDIA GPU, skip the CPU-only line and let `requirements.txt` install the default PyTorch build, then train with `--device cuda`.
 
 Download the dataset:
 
@@ -131,6 +134,14 @@ mkdir -p data
 curl -L -o data/ml-1m.zip https://files.grouplens.org/datasets/movielens/ml-1m.zip
 unzip data/ml-1m.zip -d data/
 ```
+
+Check the setup. The tests take a few seconds and do not train anything:
+
+```bash
+pytest
+```
+
+The commands below run from the project root with the environment active. `PYTHONPATH=src` lets Python find the `nextreel` package without installing it.
 
 Train NextReel. Each seed trains until validation NDCG@10 stops improving for 5 epochs, then scores the test set once:
 
