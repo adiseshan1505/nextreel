@@ -96,7 +96,7 @@ Here $r_u$ is the rank of user $u$'s real next movie, and $U$ is the set of user
 
 ### Results
 
-Not available yet. Once training is done, this section will have the comparison table from [results/results.md](results/results.md), the sampled vs full-catalog comparison, and the ablations, such as removing the position vectors to test whether the model really uses order.
+Not available yet. Once training is done, `python -m nextreel.report` fills [results/results.md](results/results.md) with the comparison table, the sampled vs full-catalog comparison, and the ablations, such as removing the position vectors to test whether the model really uses order.
 
 ### Demo
 
@@ -126,7 +126,27 @@ curl -L -o data/ml-1m.zip https://files.grouplens.org/datasets/movielens/ml-1m.z
 unzip data/ml-1m.zip -d data/
 ```
 
-Commands for training, evaluation and the demo will be added once that code is in.
+Train NextReel. Each seed trains until validation NDCG@10 stops improving for 5 epochs, then scores the test set once:
+
+```bash
+PYTHONPATH=src python -m nextreel.train --config configs/sasrec.yaml
+```
+
+Train the baselines and the ablation the same way:
+
+```bash
+for config in popularity item2item mf_bpr gru sasrec_no_position; do
+    PYTHONPATH=src python -m nextreel.train --config configs/$config.yaml
+done
+```
+
+Useful flags: `--seeds 0` for a single seed, `--max-epochs 5` for a quick check, `--device cuda` if a GPU is available.
+
+Each run writes `metrics.json`, `config.yaml` and, for the neural models, `model.pt` to `runs/<config>/seed<n>/`. Collect every run into the results table:
+
+```bash
+PYTHONPATH=src python -m nextreel.report
+```
 
 ### Project structure
 
